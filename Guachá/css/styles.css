@@ -1,0 +1,54 @@
+:root {
+    /* Color Púrpura extraído de tus PDFs */
+    --guacha-color: #017aff; 
+    --guacha-dark: #0061c8;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Clases personalizadas */
+.bg-guacha {
+    background-color: var(--guacha-color) !important;
+}
+
+.text-guacha {
+    color: var(--guacha-color) !important;
+}
+
+.btn-guacha {
+    background-color: var(--guacha-color);
+    border: none;
+}
+
+.btn-guacha:hover {
+    background-color: var(--guacha-dark);
+}
+
+/* Ajustes para inputs estilo móvil */
+.form-control {
+    border-radius: 10px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(92, 122, 231, 0.25);
+    border-color: var(--guacha-color);
+}
+
+/* Ocultar barra de scroll pero permitir deslizar */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Bordes redondeados modernos */
+.rounded-4 {
+    border-radius: 1rem !important;
+}
