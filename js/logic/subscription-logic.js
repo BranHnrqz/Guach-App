@@ -1,7 +1,7 @@
 import { db, auth } from '../data/firebase-config.js';
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-export async function procesarPagoSimulado(planSeleccionado) {
+export async function procesarPagoSimulado(planSeleccionado, dui) {
     const usuario = auth.currentUser;
     if (!usuario) throw new Error("No hay usuario autenticado");
 
@@ -13,8 +13,9 @@ export async function procesarPagoSimulado(planSeleccionado) {
     
     await updateDoc(userRef, {
         plan: planSeleccionado,
-        estadoCuenta: 'activo', // Esto desbloqueará el dashboard
-        fechaSuscripcion: new Date().toISOString()
+        estadoCuenta: 'activo', // Esto desbloqueará el flujo
+        fechaSuscripcion: new Date().toISOString(),
+        pagoDUI: dui, // GUARDAMOS EL DUI ASOCIADO AL PAGO
     });
 
     return true;

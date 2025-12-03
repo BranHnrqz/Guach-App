@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guachá - Compra Local</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Nuestros Estilos -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Librería para recortar imágenes -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <script>
+        // Definimos la función globalmente antes de que cargue el mapa
+        window.initMap = function() {
+            console.log("Google Maps API cargada exitosamente.");
+            // Marcamos una bandera global
+            window.googleMapsLoaded = true;
+        };
+    </script>
+    <!-- NOTA: La API Key debe ser insertada aquí si el entorno lo permite -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC8ou9Z9aT44ke0fNMfAAlXmR2ZnzqefAE&libraries=places&callback=initMap"></script>
+
+</head>
+<body class="bg-light">
+
+    <!-- =============================================
+         VISTA 1: PORTADA (LANDING)
+         ============================================= -->
+    <div id="view-landing" class="container-fluid vh-100 d-flex flex-column justify-content-center align-items-center bg-guacha text-white text-center">
+        <div class="mb-4">
+            <img src="img/logo.png" alt="Guachá Logo" style="max-width: 350px;">
+        </div>
+        <p class="lead mb-5 opacity-75">Compra y vende con tu<br>comunidad local.</p>
+        
+        <button class="btn btn-light btn-lg text-guacha fw-bold rounded-pill px-5 shadow-sm" onclick="mostrarOpcionesBienvenida()">
+            Continuar
+        </button>
+    </div>
+
+    <!-- =============================================
+         VISTA 2: OPCIONES DE BIENVENIDA
+         ============================================= -->
+    <div id="view-welcome-options" class="container-fluid vh-100 d-none flex-column justify-content-center align-items-center bg-light">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-guacha">Bienvenido</h2>
+            <p class="text-muted">Elige una opción para acceder</p>
+        </div>
+
+        <div class="d-grid gap-3 col-10 col-md-4 mx-auto">
+            <button class="btn btn-guacha btn-lg text-white fw-bold shadow-sm" onclick="mostrarLogin()">
+                Iniciar Sesión
+            </button>
+            <button class="btn btn-outline-primary btn-lg fw-bold" onclick="mostrarRegistro()">
+                Registrarse
+            </button>
+            <button class="btn btn-link text-muted mt-3" onclick="volverALanding()">
+                <i class="bi bi-arrow-left"></i> Volver
+            </button>
+        </div>
+    </div>
+
+    <!-- =============================================
+         VISTA 3: INICIAR SESIÓN (LOGIN)
+         ============================================= -->
+    <div id="view-login" class="container-fluid vh-100 d-none flex-column justify-content-center align-items-center bg-light">
+        <div class="text-center mb-4">
+            <button class="btn btn-link text-decoration-none text-muted mb-3" onclick="volverAWelcome()">
+                <i class="bi bi-arrow-left"></i> Volver
+            </button>
+            <h2 class="fw-bold text-guacha">¡Hola de nuevo!</h2>
+        </div>
+
+        <div class="bg-white p-4 rounded-4 shadow-sm" style="max-width: 400px; width: 100%;">
+            <form id="form-login">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">CORREO ELECTRÓNICO</label>
+                    <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">CONTRASEÑA</label>
+                    <input type="password" id="login-pass" class="form-control" required>
+                </div>
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-guacha btn-lg text-white fw-bold">Entrar</button>
+                </div>
+            </form>
+
+            <div class="text-center text-muted mb-3 small">- O entra con -</div>
+            <div class="d-grid mb-4">
+                <button id="btn-google-login" class="btn btn-outline-dark py-2" type="button">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="me-2" style="width:18px;"> 
+                    Google
+                </button>
+            </div>
+            <div class="text-center border-top pt-3">
+                <span class="text-muted">¿No tienes una cuenta?</span>
+                <button class="btn btn-link text-guacha fw-bold text-decoration-none p-0 ms-1" onclick="mostrarRegistro()">Regístrate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         VISTA 4: REGISTRO COMPLETO (Formulario)
+         ============================================= -->
+    <div id="view-register" class="container d-none py-5 min-vh-100 bg-light">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <button class="btn btn-link text-decoration-none mb-3 ps-0 text-muted" onclick="mostrarLogin()">
+                    <i class="bi bi-arrow-left"></i> Volver al Login
+                </button>
+                
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4 p-md-5">
+                        <h3 class="fw-bold text-guacha mb-1">Crear Cuenta Nueva</h3>
+                        <p class="text-muted small mb-4">Ingresa tus datos personales</p>
+
+                        <form id="form-registro-completo">
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small">Nombre</label>
+                                    <input type="text" id="reg-nombre" class="form-control" required>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-bold small">Apellido</label>
+                                    <input type="text" id="reg-apellido" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Fecha de Nacimiento</label>
+                                <input type="date" id="reg-fecha" class="form-control" required>
+                                <div class="form-text" style="font-size: 10px;">Mayores de 18 años.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">DUI</label>
+                                <input type="text" id="reg-dui" class="form-control" placeholder="00000000-0" maxlength="10" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Correo Electrónico</label>
+                                <input type="email" id="reg-email" class="form-control" placeholder="ejemplo@correo.com" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Contraseña</label>
+                                <input type="password" id="reg-pass" class="form-control" minlength="6" placeholder="Mínimo 6 caracteres" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-guacha">TIPO DE CUENTA</label>
+                                <select id="reg-tipo" class="form-select border-primary bg-light fw-bold" required>
+                                    <option value="" selected disabled>Selecciona una opción...</option>
+                                    <option value="cliente">Cliente (Quiero Comprar)</option>
+                                    <option value="vendedor">Emprendimiento (Quiero Vender)</option>
+                                </select>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-guacha btn-lg text-white fw-bold">Completar Registro</button>
+                            </div>
+                        </form>
+
+                        <!-- Botón Google M O V I D O AQUÍ ABAJO -->
+                        <div class="position-relative text-center my-4">
+                            <hr class="text-muted">
+                            <span class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small">O</span>
+                        </div>
+                        <div class="d-grid">
+                            <button id="btn-google-register" class="btn btn-outline-dark py-2" type="button">
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="me-2" style="width:18px;"> 
+                                Registrarse con Google
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         VISTA 5: CONFIGURACIÓN DE PERFIL DE NEGOCIO
+         ============================================= -->
+    <div id="view-seller-setup" class="container d-none vh-100 py-5 bg-light">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <h2 class="fw-bold text-guacha mb-2">Configura tu Negocio</h2>
+                <p class="text-muted mb-4">Esta es tu identidad de marca en Guachá.</p>
+
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <form id="form-seller-setup">
+                        <!-- Foto del Negocio -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold d-block">Logo del Negocio</label>
+                            <div class="position-relative d-inline-block">
+                                <div style="width: 120px; height: 120px; background: #f8f9fa; border-radius: 50%; overflow: hidden; margin: 0 auto; border: 4px solid #6c5ce7;">
+                                    <img id="preview-logo-business" src="img/logo.png" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <input type="file" id="business-file" class="form-control mt-3" accept="image/*" required>
+                            </div>
+                        </div>
+
+                        <!-- Nombre del Negocio -->
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-bold">Nombre del Establecimiento</label>
+                            <input type="text" id="business-name" class="form-control form-control-lg" placeholder="Ej: Tienda Rosita" required>
+                        </div>
+
+                        <!-- Descripción del Negocio -->
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-bold">Descripción Breve</label>
+                            <textarea id="business-desc" class="form-control" rows="3" maxlength="200" placeholder="Máximo 200 caracteres sobre tu tienda." required></textarea>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-guacha text-white fw-bold btn-lg">Guardar y Continuar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+ <!-- =============================================
+         VISTA 5: UBICACIÓN (NUEVA ESTRUCTURA CON PESTAÑAS)
+         ============================================= -->
+    <div id="view-location-setup" class="container d-none min-vh-100 py-5 bg-light d-flex align-items-center">
+        <div class="row justify-content-center w-100">
+            <div class="col-md-8 col-lg-6">
+                
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-guacha mb-2" id="location-setup-title">Ingresa tu Ubicación</h2>
+                    <p class="text-muted" id="location-setup-subtitle">Elige cómo quieres establecer tu dirección.</p>
+                </div>
+                
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                    <ul class="nav nav-pills nav-fill p-2 bg-white border-bottom" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-bold" id="pills-map-tab" data-bs-toggle="pill" data-bs-target="#pills-map" type="button" role="tab">
+                                <i class="bi bi-geo-alt-fill me-2"></i>Mapa GPS
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill fw-bold" id="pills-manual-tab" data-bs-toggle="pill" data-bs-target="#pills-manual" type="button" role="tab">
+                                <i class="bi bi-list-ul me-2"></i>Lista Manual
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-4" id="pills-tabContent">
+                        
+                        <div class="tab-pane fade show active" id="pills-map" role="tabpanel">
+                            <div class="mb-3 position-relative rounded-3 overflow-hidden border" style="height: 300px;">
+                                <div id="google-map" style="width: 100%; height: 100%;"></div>
+                                <div id="map-placeholder" class="d-none position-absolute top-50 start-50 translate-middle text-center text-muted">
+                                    <i class="bi bi-wifi-off display-1"></i><br>Mapa no disponible
+                                </div>
+                                <button class="btn btn-light position-absolute bottom-0 end-0 m-2 shadow-sm btn-sm fw-bold" type="button" id="btn-my-location">
+                                    <i class="bi bi-crosshair"></i> Mi Ubicación
+                                </button>
+                            </div>
+                            <p class="text-center text-muted small mb-3">Arrastra el mapa para colocar el pin en el lugar exacto.</p>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">REFERENCIA / PUNTO CLAVE</label>
+                                <textarea id="map-address-ref" class="form-control" rows="2" placeholder="Ej: Casa verde frente al parque, portón negro..."></textarea>
+                            </div>
+                            
+                            <input type="hidden" id="lat-map">
+                            <input type="hidden" id="lng-map">
+
+                            <div class="d-grid">
+                                <button class="btn btn-guacha text-white fw-bold py-2" id="btn-save-map-location">Confirmar Ubicación</button>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pills-manual" role="tabpanel">
+                            <form id="form-manual-location">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">DEPARTAMENTO</label>
+                                    <select id="select-depto" class="form-select" required>
+                                        <option value="" selected disabled>Cargando...</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">MUNICIPIO</label>
+                                    <select id="select-muni" class="form-select" disabled required>
+                                        <option value="" selected disabled>---</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">DISTRITO</label>
+                                    <select id="select-dist" class="form-select" disabled required>
+                                        <option value="" selected disabled>---</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">DIRECCIÓN EXACTA</label>
+                                    <textarea id="manual-address" class="form-control" rows="2" placeholder="Colonia, Calle, # Casa..." required></textarea>
+                                </div>
+                                <div class="d-grid mt-4">
+                                    <button type="submit" class="btn btn-guacha text-white fw-bold py-2">Guardar Dirección</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button id="btn-cancel-location" class="btn btn-sm btn-outline-secondary rounded-pill px-4">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar y Volver
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="view-profile" class="container-fluid d-none p-0 bg-light vh-100 overflow-auto">
+        <nav class="navbar navbar-dark bg-guacha px-3 shadow-sm sticky-top">
+            <div class="d-flex align-items-center text-white">
+                <i class="bi bi-person-circle fs-4 me-2"></i>
+                <span class="fw-bold">Mi Perfil</span>
+            </div>
+            <button class="btn btn-link text-white ms-auto p-0" onclick="regresarAlDashboard()">
+                <i class="bi bi-x-lg fs-5"></i>
+            </button>
+        </nav>
+
+        <div class="container py-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <form id="form-perfil-view">
+                        <div class="text-center mb-4">
+                            <div class="position-relative d-inline-block">
+                                <img id="profile-view-img" src="img/logo.png" class="rounded-circle border border-3 border-light shadow-sm" style="width: 120px; height: 120px; object-fit: cover;">
+                                <label for="profile-file-input" class="position-absolute bottom-0 end-0 bg-dark text-white rounded-circle p-2 shadow" style="cursor: pointer;">
+                                    <i class="bi bi-camera-fill"></i>
+                                </label>
+                                <input type="file" id="profile-file-input" class="d-none" accept="image/*">
+                            </div>
+                            <p class="text-muted small mt-2">Toca la cámara para cambiar foto</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted" id="lbl-profile-name">Nombre</label>
+                            <input type="text" id="profile-name-input" class="form-control form-control-lg" required>
+                        </div>
+
+                        <div id="profile-vendor-fields" class="d-none">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Descripción del Negocio</label>
+                                <textarea id="profile-desc-input" class="form-control" rows="3" maxlength="200"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-5">
+                            <button type="submit" class="btn btn-guacha btn-lg text-white fw-bold shadow-sm">Guardar Cambios</button>
+                            <hr>
+                            <button type="button" class="btn btn-outline-danger border-0" onclick="cerrarSesionApp()">
+                                <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div style="height: 100px;"></div> 
+        </div>
+    </div>
+    <!-- =============================================
+         VISTA 6: PLANES (SUSCRIPCIÓN)
+         ============================================= -->
+    <div id="view-plans" class="container d-none vh-100 py-5 bg-light overflow-auto">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-guacha">Empieza a Vender</h2>
+            <p class="text-muted">Elige el plan ideal para tu negocio</p>
+        </div>
+        <div class="row justify-content-center g-4">
+            <div class="col-md-5 col-lg-4">
+                <div class="card border-0 shadow-sm h-100 rounded-4">
+                    <div class="card-body p-4 text-center">
+                        <h4 class="fw-bold mb-3">Emprendedor</h4>
+                        <h1 class="display-4 fw-bold text-guacha">$5<small class="fs-5">/mes</small></h1>
+                        <ul class="list-unstyled text-start mx-auto mb-4 small">
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>50 Productos</li>
+                            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>5 Categorías</li>
+                        </ul>
+                        <button class="btn btn-outline-primary rounded-pill w-100 mt-auto fw-bold" onclick="irAlPago('basico', 5.00)">Elegir</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5 col-lg-4">
+                <div class="card border-0 shadow-lg h-100 rounded-4 border-primary">
+                    <div class="bg-guacha text-white text-center py-1 small fw-bold">RECOMENDADO</div>
+                    <div class="card-body p-4 text-center">
+                        <h4 class="fw-bold mb-3">Empresarial</h4>
+                        <h1 class="display-4 fw-bold text-guacha">$10<small class="fs-5">/mes</small></h1>
+                        <ul class="list-unstyled text-start mx-auto mb-4 small">
+                            <li class="mb-2"><i class="bi bi-star-fill text-warning me-2"></i><strong>Ilimitado</strong></li>
+                            <li class="mb-2"><i class="bi bi-lightning-fill text-warning me-2"></i>Destacado</li>
+                        </ul>
+                        <button class="btn btn-guacha text-white rounded-pill w-100 mt-auto fw-bold" onclick="irAlPago('premium', 10.00)">Elegir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         VISTA 7: CHECKOUT SIMULADO (CON DUI y Expiración mejorada)
+         ============================================= -->
+    <div id="view-checkout" class="container d-none vh-100 py-5 bg-light">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <button class="btn btn-link text-decoration-none mb-3 ps-0 text-muted" onclick="volverAPlanes()"><i class="bi bi-arrow-left"></i> Cambiar Plan</button>
+                <div class="card border-0 shadow rounded-4">
+                    <div class="card-header bg-white border-0 pt-4 pb-0 text-center">
+                        <h5 class="fw-bold text-muted small">RESUMEN</h5>
+                        <h3 class="fw-bold text-guacha" id="checkout-plan-name">Plan</h3>
+                        <h2 class="display-5 fw-bold" id="checkout-amount">$0.00</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="form-pago">
+                            <!-- DUI (Requerido y Validado) -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">DUI del Titular</label>
+                                <input type="text" id="pago-dui" class="form-control" placeholder="00000000-0" maxlength="10" required>
+                                <div class="form-text" style="font-size: 10px;">Debe coincidir con el registro.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">NÚMERO DE TARJETA</label>
+                                <input type="text" id="card-number" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label small fw-bold text-muted">EXPIRACIÓN</label>
+                                    <input type="text" id="card-expiry" class="form-control" placeholder="MM/YY" maxlength="5" required>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label small fw-bold text-muted">CVV</label>
+                                    <input type="password" class="form-control" placeholder="123" maxlength="3" required>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selected-plan-id">
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-guacha btn-lg text-white fw-bold">Pagar Suscripción</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- =============================================
+         MODAL FLOTANTE: ELEGIR ROL (GOOGLE)
+         ============================================= -->
+    <div class="modal fade" id="modalGoogleType" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-guacha text-white border-0">
+                    <h5 class="modal-title fw-bold">¡Solo un paso más!</h5>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="mb-3">Hola <span id="google-user-name" class="fw-bold"></span>, dinos qué harás en Guachá:</p>
+                    
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-outline-primary p-3 text-start" onclick="finalizarGoogle('cliente')">
+                            <div class="fw-bold"><i class="bi bi-bag-fill me-2"></i> Soy Cliente</div>
+                        </button>
+                        <button class="btn btn-outline-primary p-3 text-start" onclick="finalizarGoogle('vendedor')">
+                            <div class="fw-bold"><i class="bi bi-shop me-2"></i> Soy Emprendimiento</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    
+    <!-- =============================================
+         DASHBOARD CLIENTE (ACTUALIZADO)
+         ============================================= -->
+    <div id="view-client-dashboard" class="container-fluid d-none p-0 bg-light vh-100 overflow-auto">
+        <!-- Navbar Cliente -->
+        <nav class="navbar navbar-light bg-white px-3 shadow-sm sticky-top">
+            <div class="d-flex align-items-center">
+                <img id="client-photo" src="img/logo.png" class="rounded-circle me-2" width="40" height="40">
+                <div><small class="text-muted d-block lh-1">Hola Comprador 👋</small><span id="client-name" class="fw-bold text-guacha">Usuario</span></div>
+            </div>
+            <div class="d-flex align-items-center">
+                <!-- Botón Ubicación (Navbar) -->
+                <button class="btn btn-link text-muted text-decoration-none me-2 p-0" onclick="mostrarConfiguracionUbicacion('cliente')" title="Cambiar Ubicación">
+                    <i class="bi bi-geo-alt-fill fs-5 text-guacha"></i>
+                </button>
+                <!-- Logo -->
+                <img src="img/loggblu.png" class="img-fluid" style="height: 20px;">
+                <!-- Cerrar Sesión -->
+                <button class="btn btn0-link text-muted ms-3 p-0" onclick="cerrarSesionApp()" title="Salir">
+                    <i class="bi bi-box-arrow-right fs-4"></i>
+                </button>
+            </div>
+            <!-- Botón oculto modo vendedor -->
+            <button id="btn-back-to-admin" class="btn btn-sm btn-guacha text-white rounded-pill ms-auto d-none" onclick="cambiarModo('vendedor')"><i class="bi bi-shop me-1"></i> Mi Negocio</button>
+        </nav>
+
+        <div class="p-3">
+            <div class="card border-0 bg-guacha text-white rounded-4 mb-4"><div class="card-body p-4"><h3 class="fw-bold">¡Compra fácil!</h3></div></div>
+            <div id="contenedor-productos-cliente" class="row g-3 pb-5"><div class="col-12 text-center text-muted mt-5"><p>Cargando...</p></div></div>
+            <div style="height: 100px;"></div>
+        </div>
+    </div>
+
+    <!-- =============================================
+         DASHBOARD VENDEDOR (GRID DE TARJETAS)
+         ============================================= -->
+    <div id="view-seller-dashboard" class="container-fluid d-none p-0 bg-light vh-100 overflow-auto">
+        <!-- Navbar Vendedor -->
+        <nav class="navbar navbar-dark bg-guacha px-3 shadow sticky-top">
+            <div class="d-flex align-items-center">
+                <img id="seller-photo" src="img/logg.png" class="rounded-circle border border-2 border-white me-2" width="40" height="40">
+                <div class="text-white"><small class="d-block lh-1 opacity-75">Tu Negocio</small><span id="seller-name" class="fw-bold">Mi Tienda</span></div>
+            </div>
+            
+            <div class="d-flex align-items-center ms-auto">
+                <!-- Ubicación -->
+                <button class="btn btn-link text-white p-0 me-3" onclick="mostrarConfiguracionUbicacion('vendedor')" title="Ubicación del Negocio">
+                    <i class="bi bi-geo-alt-fill fs-5"></i>
+                </button>
+                <!-- Logo -->
+                <img src="img/logg.png" style="height: 20px; width: 20px;">
+                <!-- Cerrar Sesión -->
+                <button class="btn btn-link text-white ms-3 p-0" onclick="cerrarSesionApp()" title="Salir">
+                    <i class="bi bi-box-arrow-right fs-4"></i>
+                </button>
+            </div>
+        </nav>
+        
+        <!-- GRID DE TARJETAS -->
+        <div class="p-3">
+            <div class="d-grid gap-3">
+                
+                <!-- 1. Inventario -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold m-0"><i class="bi bi-box-seam me-2 text-primary"></i>Inventario</h5>
+                            <button class="btn btn-sm btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#modalProducto"><i class="bi bi-plus-lg"></i> Nuevo</button>
+                                 <div class="ms-auto me-2">
+                                       <select id="filtro-orden" class="form-select form-select-sm border-0 bg-light fw-bold text-muted" onchange="aplicarOrdenamiento()">
+                                            <option value="fecha_desc">Más recientes</option>
+                                            <option value="fecha_asc">Más antiguos</option>
+                                            <option value="stock_asc">Menor Stock</option>
+                                            <option value="stock_desc">Mayor Stock</option>
+                                            <option value="precio_asc">Precio: Bajo</option>
+                                            <option value="precio_desc">Precio: Alto</option>
+                                       </select>
+                                  </div>
+                        </div>        
+                        <div id="contenedor-productos-vendedor" class="row g-2">
+                            <div class="col-12 text-center py-3 text-muted small">Sin productos activos.</div>
+                        </div>
+
+                        <div class="text-center mt-3 d-none" id="btn-ver-mas-container">
+                             <button class="btn btn-outline-secondary btn-sm rounded-pill px-4" onclick="cargarMasProductos()">
+                                     Mostrar más <i class="bi bi-chevron-down"></i>
+                             </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. Pedidos -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-list-check me-2 text-warning"></i>Pedidos</h5>
+                        <div class="row text-center g-2">
+                            <div class="col-4"><div class="p-2 bg-light rounded-3 border"><h3 class="fw-bold mb-0">0</h3><small class="text-muted" style="font-size: 10px;">En Proceso</small></div></div>
+                            <div class="col-4"><div class="p-2 bg-light rounded-3 border"><h3 class="fw-bold mb-0">0</h3><small class="text-muted" style="font-size: 10px;">Listos</small></div></div>
+                            <div class="col-4"><div class="p-2 bg-light rounded-3 border"><h3 class="fw-bold mb-0">0</h3><small class="text-muted" style="font-size: 10px;">Entregados</small></div></div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <span class="badge bg-success me-1">Pagado</span>
+                            <span class="badge bg-danger">Pendiente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Ventas -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Ventas</h5>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div><small class="text-muted d-block">Ganancias Hoy</small><h3 class="fw-bold text-success mb-0">$0.00</h3></div>
+                            <div class="text-end"><small class="text-muted d-block">Ganancias Mes</small><h4 class="fw-bold text-dark mb-0">$0.00</h4></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Plan -->
+                <div class="card border-0 shadow-sm rounded-4 bg-guacha text-white">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div><small class="opacity-75 d-block">Plan Actual</small><h4 class="fw-bold mb-0" id="vendedor-plan-actual">Cargando...</h4></div>
+                        <button class="btn btn-light text-guacha btn-sm fw-bold rounded-pill shadow-sm" onclick="irAlPago('premium', 10.00)">Mejorar Plan</button>
+                    </div>
+                </div>
+
+                <!-- Botón Modo Cliente -->
+                <button class="btn btn-outline-secondary w-100 rounded-pill mt-2" onclick="cambiarModo('comprador')"><i class="bi bi-eye me-2"></i> Ver como Cliente</button>
+            </div>
+            <div style="height: 120px;"></div>
+        </div>
+    </div>
+
+    <!-- Menú Inferior (Oculto en Login/Pagos/Setup) -->
+    <nav id="main-navbar" class="navbar fixed-bottom bg-white border-top shadow-lg d-none" style="padding-bottom: 15px; padding-top: 10px; border-radius: 20px 20px 0 0;">
+        <div class="container-fluid justify-content-around">
+            <a href="#" class="text-center text-guacha text-decoration-none"><i class="bi bi-house-door-fill fs-4"></i><small class="d-block" style="font-size: 10px;">Inicio</small></a>
+            <a href="#" class="text-center text-muted text-decoration-none"><i class="bi bi-headset fs-4"></i><small class="d-block" style="font-size: 10px;">Soporte</small></a>
+            <a href="#" class="text-center text-muted text-decoration-none"><i class="bi bi-heart fs-4"></i><small class="d-block" style="font-size: 10px;">Favoritos</small></a>
+            
+            <a href="#" onclick="mostrarVistaPerfil()" class="text-center text-muted text-decoration-none">
+                <i class="bi bi-person fs-4"></i>
+                <small class="d-block" style="font-size: 10px;">Perfil</small>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Modal Nuevo Producto (oculto) -->
+    <div class="modal fade" id="modalProducto" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-guacha text-white">
+                    <h5 class="modal-title fw-bold" id="modalProductoLabel">Nuevo Producto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-producto">
+                        <input type="hidden" id="prod-id-edit">
+
+<div class="row">
+    <div class="col-md-5 text-center mb-3">
+        <div id="crop-container" class="d-none mb-2" style="max-height: 300px;"><img id="image-to-crop" style="max-width: 100%;"></div>
+        <div id="preview-container" class="mb-2 position-relative">
+            <img id="preview-img-prod" src="img/logo.png" class="img-thumbnail shadow-sm rounded-4" style="width: 150px; height: 150px; object-fit: cover;">
+            <label for="prod-file-input" class="position-absolute bottom-0 end-0 bg-dark text-white rounded-circle p-2" style="cursor: pointer; right: 25% !important;"><i class="bi bi-camera"></i></label>
+        </div>
+        <input type="file" id="prod-file-input" class="d-none" accept="image/*">
+        <button type="button" id="btn-crop-confirm" class="btn btn-sm btn-success mt-2 d-none w-100">Recortar</button>
+    </div>
+
+    <div class="col-md-7">
+        <input type="text" id="prod-nombre" class="form-control mb-2 fw-bold" placeholder="Nombre del Producto" required>
+        <select id="prod-categoria" class="form-select mb-2" required></select> <div class="row mb-2">
+            <div class="col-6"><input type="number" id="prod-precio" class="form-control" placeholder="Precio $" step="0.01" required></div>
+            <div class="col-6" id="div-stock-simple"><input type="number" id="prod-stock" class="form-control" placeholder="Stock Total"></div>
+        </div>
+
+        <div id="area-variantes" class="d-none bg-light p-2 rounded border mb-3">
+            <label class="small fw-bold mb-1">Disponibilidad por Talla:</label>
+            <div class="input-group mb-2">
+                <select id="var-talla-select" class="form-select form-select-sm" style="max-width: 40%;">
+                    </select>
+                <input type="number" id="var-stock-input" class="form-control form-control-sm" placeholder="Cant.">
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.agregarVarianteUI()">+</button>
+            </div>
+            <div id="lista-variantes-agregadas" class="d-flex flex-wrap gap-1"></div>
+        </div>
+
+        <div id="dynamic-fields-area" class="p-2 bg-light rounded border mb-3 d-none"></div>
+
+        <textarea id="prod-desc" class="form-control" rows="3" placeholder="Descripción (Opcional)"></textarea>
+    </div>
+</div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" id="btn-save-prod" class="btn btn-guacha fw-bold text-white">Publicar Producto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENÚ INFERIOR (CLIENTE) -->
+    <nav id="main-navbar" class="navbar fixed-bottom bg-white border-top shadow-lg d-none" style="padding-bottom: 15px; padding-top: 10px; border-radius: 20px 20px 0 0;">
+        <div class="container-fluid justify-content-around">
+            <a href="#" class="text-center text-guacha text-decoration-none"><i class="bi bi-house-door-fill fs-4"></i><small class="d-block" style="font-size: 10px;">Inicio</small></a>
+            <!-- ÍCONO PEDIDOS NUEVO -->
+            <a href="#" class="text-center text-muted text-decoration-none"><i class="bi bi-bag-check-fill fs-4"></i><small class="d-block" style="font-size: 10px;">Pedidos</small></a>
+            <a href="#" class="text-center text-muted text-decoration-none"><i class="bi bi-headset fs-4"></i><small class="d-block" style="font-size: 10px;">Soporte</small></a>
+            <a href="#" class="text-center text-muted text-decoration-none"><i class="bi bi-heart fs-4"></i><small class="d-block" style="font-size: 10px;">Favoritos</small></a>
+            
+            <a href="#" onclick="mostrarVistaPerfil()" class="text-center text-muted text-decoration-none">
+                <i class="bi bi-person fs-4"></i>
+                <small class="d-block" style="font-size: 10px;">Perfil</small>
+            </a>
+        </div>
+    </nav>
+
+    <!-- MODALES -->
+    <div class="modal fade" id="modalGoogleType" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow rounded-4"><div class="modal-body p-4 text-center"><p class="mb-3">Hola <span id="google-user-name" class="fw-bold"></span>, ¿qué harás hoy?</p><div class="d-grid gap-2"><button class="btn btn-outline-primary" onclick="finalizarGoogle('cliente')">Soy Cliente</button><button class="btn btn-outline-primary" onclick="finalizarGoogle('vendedor')">Soy Emprendimiento</button></div></div></div></div></div>
+    
+    <input type="hidden" id="location-mode-tracker" value="cliente">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="js/views/ui-manager.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
