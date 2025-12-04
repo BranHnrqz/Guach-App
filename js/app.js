@@ -376,33 +376,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // =========================================================
-    // 4. OTROS
+// =========================================================
+    // 4. CONFIGURACIÓN VENDEDOR (CON REDIMENSIÓN DE IMAGEN)
     // =========================================================
     const formSetup = document.getElementById('form-seller-setup');
+    
     if(formSetup) {
         const prev = document.getElementById('preview-logo-business');
         const fileIn = document.getElementById('business-file');
+        
+        // Variable para guardar la imagen redimensionada en memoria
+        let imagenOptimizadaBase64 = null;
+
         if(fileIn) fileIn.addEventListener('change', () => {
             if(fileIn.files[0]) {
-                const r = new FileReader();
-                r.onload = (e) => prev.src = e.target.result;
-                r.readAsDataURL(fileIn.files[0]);
+                const file = fileIn.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    // 1. Creamos una imagen en memoria
+                    const img = new Image();
+                    img.src = e.target.result;
+                    
+                    img.onload = () => {
+                        // 2. Usamos Canvas para redimensionar a 300x300
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Configurar tamaño fijo pequeño (ideal para logos)
+                        const MAX_WIDTH = 300;
+                        const MAX_HEIGHT = 300;
+                        
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = MAX_HEIGHT;
+
+                        // Dibujar imagen redimensionada (estirada o recortada simple)
+                        // Para un logo circular, object-fit: cover visualmente es mejor,
+                        // aquí haremos un "cover" matemático simple:
+                        const ratio = Math.max(MAX_WIDTH / img.width, MAX_HEIGHT / img.height);
+                        const centerShift_x = (MAX_WIDTH - img.width * ratio) / 2;
+                        const centerShift_y = (MAX_HEIGHT - img.height * ratio) / 2;
+                        
+                        ctx.drawImage(
+                            img, 0, 0, img.width, img.height,
+                            centerShift_x, centerShift_y, img.width * ratio, img.height * ratio
+                        );
+
+                        // 3. Convertir a Base64 comprimido (JPEG 0.7)
+                        imagenOptimizadaBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        
+                        // 4. Mostrar en pantalla
+                        prev.src = imagenOptimizadaBase64;
+                    };
+                };
+                reader.readAsDataURL(file);
             }
         });
+
         formSetup.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = formSetup.querySelector('button');
             btn.disabled = true; btn.innerText = "Guardando...";
+            
             try {
+                // Usamos la imagen optimizada si existe, sino la que ya tenía (src)
+                const fotoFinal = imagenOptimizadaBase64 || prev.src;
+                
+                // Validación extra de tamaño
+                if (fotoFinal.length > 900000) {
+                    throw new Error("La imagen sigue siendo muy pesada. Intenta con otra.");
+                }
+
                 await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
                     nombreNegocio: getVal('business-name'),
                     descripcionNegocio: getVal('business-desc'),
-                    fotoNegocio: document.getElementById('preview-logo-business').src,
+                    fotoNegocio: fotoFinal,
                     perfilCompleto: true
                 });
+                
                 await mostrarPantallaDashboard(auth.currentUser.uid);
-            } catch(e) { alert(e.message); btn.disabled = false; btn.innerText = "Guardar"; }
+            } catch(e) { 
+                console.error(e);
+                alert(e.message); 
+                btn.disabled = false; btn.innerText = "Guardar"; 
+            }
         });
     }
     
@@ -507,6 +564,30 @@ document.addEventListener('DOMContentLoaded', () => {
             // Destruir cropper para liberar memoria
             cropperInstance.destroy();
             cropperInstance = null;
+        });
+    }
+
+    // PAGO PEDIDO ONLINE (CLIENTE)
+    const formPagoPedido = document.getElementById('form-pago-pedido');
+    if(formPagoPedido) {
+        // Formato tarjeta visual
+        const cardIn = document.getElementById('card-num-pedido');
+        const expIn = document.getElementById('card-exp-pedido');
+        
+        if(cardIn) cardIn.addEventListener('input', (e) => e.target.value = e.target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim());
+        if(expIn) expIn.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            if(v.length > 2) v = v.substring(0, 2) + '/' + v.substring(2, 4);
+            e.target.value = v;
+        });
+
+        formPagoPedido.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Simulación de validación
+            if(getVal('card-num-pedido').length < 16) { alert("Tarjeta inválida"); return; }
+            
+            // Llamamos a la lógica de finalización
+            await window.finalizarPedido('online');
         });
     }
 
