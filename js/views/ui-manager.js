@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc, getFirestore } from "https://www.gstatic.com/fi
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { CATEGORIAS_SYSTEM, obtenerProductosVendedor, eliminarProducto, actualizarProducto } from '../logic/products-logic.js';
 import { obtenerVendedoresCercanos, obtenerProductosDeVendedores } from '../logic/geo-logic.js';
-import { crearPedido, obtenerPedidosVendedor, obtenerPedidosCliente } from '../logic/orders-logic.js';// Asegúrate de importar obtenerPedidosCliente
+import { crearPedido, obtenerPedidosVendedor, obtenerPedidosCliente, actualizarEstadoPedido } from '../logic/orders-logic.js';// Asegúrate de importar obtenerPedidosCliente
 
 
 let rolRealUsuario = '';
@@ -30,8 +30,10 @@ let cacheProductosGlobales = [];
 function ocultarTodo() {
     const views = [
         'view-landing', 'view-login', 'view-register', 'view-welcome-options', 
-        'view-client-dashboard', 'view-business-detail', 'view-client-orders', 'view-seller-dashboard', 
-        'view-plans', 'view-checkout', 'view-seller-setup', 'view-location-setup', 'view-profile'
+        'view-client-dashboard', 'view-business-detail', 'view-client-orders', 
+        'view-seller-dashboard', 
+        'view-seller-orders-list', // <--- ESTA FALTABA, POR ESO NO SE CERRABA
+        'view-plans', 'view-checkout', 'view-seller-setup', 'view-location-setup', 'view-profile', 'view-coming-soon'
     ]; 
     views.forEach(id => {
         const el = document.getElementById(id);
@@ -858,6 +860,152 @@ function inicializarCategorias() {
     }
 }
 
+// --- LÓGICA DE VENTAS Y PEDIDOS (VENDEDOR) ---
+
+// 1. Cargar Contadores y Ganancias
+async function cargarDashboardVendedor(uid) {
+    // Carga el inventario (como ya lo hacías)
+    cargarProductosEnDashboard(uid);
+
+    try {
+        // Traer pedidos de Firebase
+        const pedidos = await obtenerPedidosVendedor(uid);
+        // Guardamos en variable global para filtrar rápido sin recargar
+        window.cachePedidosVendedor = pedidos; 
+
+        // Calcular Contadores
+        const enProceso = pedidos.filter(p => p.estado === 'pendiente' || p.estado === 'preparacion').length;
+        const listos = pedidos.filter(p => p.estado === 'listo').length;
+        const entregados = pedidos.filter(p => p.estado === 'entregado').length;
+
+        // Pintar en el HTML
+        document.getElementById('count-proceso').innerText = enProceso;
+        document.getElementById('count-listos').innerText = listos;
+        document.getElementById('count-entregados').innerText = entregados;
+
+        // Calcular Ganancias (Solo de lo 'entregado')
+        const hoy = new Date().toDateString();
+        const mesActual = new Date().getMonth();
+        let dineroHoy = 0;
+        let dineroMes = 0;
+
+        pedidos.filter(p => p.estado === 'entregado').forEach(p => {
+            const fechaP = new Date(p.fecha);
+            if (fechaP.toDateString() === hoy) dineroHoy += p.total;
+            if (fechaP.getMonth() === mesActual) dineroMes += p.total;
+        });
+
+        document.getElementById('ganancia-hoy').innerText = `$${dineroHoy.toFixed(2)}`;
+        document.getElementById('ganancia-mes').innerText = `$${dineroMes.toFixed(2)}`;
+
+    } catch (e) { console.error("Error dashboard vendedor:", e); }
+}
+
+// 2. Abrir la pantalla de Gestión (Lista de tarjetas)
+function abrirGestionPedidos() {
+    ocultarTodo();
+    document.getElementById('view-seller-orders-list').classList.remove('d-none');
+    document.getElementById('view-seller-orders-list').classList.add('d-block');
+    filtrarPedidosVendedor('activos'); // Mostrar pendientes por defecto
+}
+
+// 3. Filtrar pestañas (Activos vs Historial) y Pintar Tarjetas
+function filtrarPedidosVendedor(filtro) {
+    const container = document.getElementById('contenedor-gestion-pedidos');
+    container.innerHTML = '';
+    
+    // Filtro simple en memoria
+    let lista = [];
+    if(!window.cachePedidosVendedor) window.cachePedidosVendedor = [];
+
+    if (filtro === 'activos') {
+        lista = window.cachePedidosVendedor.filter(p => p.estado !== 'entregado' && p.estado !== 'cancelado');
+    } else {
+        lista = window.cachePedidosVendedor.filter(p => p.estado === 'entregado' || p.estado === 'cancelado');
+    }
+
+    if (lista.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted mt-5">No hay pedidos aquí.</div>';
+        return;
+    }
+
+    lista.forEach(p => {
+        const fecha = new Date(p.fecha).toLocaleString();
+        
+        // Botón de Acción Dinámico (El flujo de trabajo)
+        let botonAccion = '';
+        if (p.estado === 'pendiente') {
+            botonAccion = `<button class="btn btn-primary btn-sm w-100 shadow-sm" onclick="window.cambiarEstadoPedido('${p.id}', 'preparacion')">Aceptar y Preparar</button>`;
+        } else if (p.estado === 'preparacion') {
+            botonAccion = `<button class="btn btn-warning btn-sm w-100 shadow-sm" onclick="window.cambiarEstadoPedido('${p.id}', 'listo')">Marcar Listo</button>`;
+        } else if (p.estado === 'listo') {
+            botonAccion = `<button class="btn btn-success btn-sm w-100 shadow-sm" onclick="window.cambiarEstadoPedido('${p.id}', 'entregado')">Entregar y Cobrar</button>`;
+        } else {
+            botonAccion = `<span class="badge bg-success w-100">Finalizado</span>`;
+        }
+
+        // Reutilizamos el modal de ticket para ver detalles (Tallas, precios, cliente)
+        // Truco: Convertimos el objeto a string seguro para pasarlo al HTML
+        const pStr = JSON.stringify(p).replace(/"/g, '&quot;');
+
+        const html = `
+            <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden">
+                <div class="card-header bg-white border-0 d-flex justify-content-between pt-3">
+                    <span class="fw-bold text-guacha">#${p.id.slice(-5).toUpperCase()}</span>
+                    <span class="badge bg-light text-dark border">${p.estado.toUpperCase()}</span>
+                </div>
+                <div class="card-body py-2" onclick="window.verDetalleHistorial(${pStr})" style="cursor:pointer">
+                    <h6 class="mb-1 fw-bold">${p.nombreCliente || 'Cliente'}</h6>
+                    <small class="text-muted d-block mb-2">${fecha}</small>
+                    
+                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                        <span class="fw-bold">$${parseFloat(p.total).toFixed(2)}</span>
+                        <small class="text-muted">${p.metodoPago}</small>
+                    </div>
+                    
+                    <div class="text-center mt-2">
+                        <small class="text-primary fw-bold" style="font-size:11px"><i class="bi bi-eye"></i> Ver qué pidieron</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 pb-3">
+                    ${botonAccion}
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+};
+
+// 4. Cambiar Estado y Refrescar (NOMBRE CORREGIDO)
+async function cambiarEstadoPedido(idPedido, nuevoEstado) {
+    const txtEstado = nuevoEstado === 'entregado' ? 'ENTREGAR Y FINALIZAR' : nuevoEstado.toUpperCase();
+    if(!confirm(`¿Confirmar cambio a: ${txtEstado}?`)) return;
+    
+    try {
+        // 1. Actualizar en BD
+        await actualizarEstadoPedido(idPedido, nuevoEstado);
+        
+        // 2. Recargar datos
+        const uid = getAuth().currentUser.uid;
+        // Recargamos dashboard para actualizar contadores de ganancias
+        await cargarDashboardVendedor(uid); 
+        
+        // 3. Refrescar la lista visualmente manteniendo la pestaña
+        // Detectamos si estamos en 'activos' o 'historial' mirando la clase 'active' en el botón
+        const btnActivos = document.querySelector('#pills-tab-orders .nav-link.active');
+        const esHistorial = btnActivos && btnActivos.innerText.includes('Historial');
+        
+        if (esHistorial) {
+            filtrarPedidosVendedor('historial');
+        } else {
+            filtrarPedidosVendedor('activos');
+        }
+
+    } catch (e) { 
+        alert("Error al actualizar: " + e.message); 
+    }
+}
+
 function configurarModalSegunCategoria(tipo) {
     const areaVar = document.getElementById('area-variantes');
     const areaDyn = document.getElementById('dynamic-fields-area');
@@ -1098,7 +1246,7 @@ async function mostrarPantallaDashboard(userUid) {
             const planTexto = document.getElementById('vendedor-plan-actual');
             if(planTexto) planTexto.innerText = (data.plan || 'Emprendedor').toUpperCase();
 
-            cargarProductosEnDashboard(userUid);
+            cargarDashboardVendedor(userUid);
 
         } else {
             mostrarBarraInferior();
@@ -1107,7 +1255,6 @@ async function mostrarPantallaDashboard(userUid) {
             
             document.getElementById('client-name').innerText = data.nombre;
             
-            // 👇 AGREGA ESTA LÍNEA AQUÍ:
             if(data.foto) document.getElementById('client-photo').src = data.foto;
 
             cargarDashboardCliente(userUid);
@@ -1215,11 +1362,18 @@ function regresarAlDashboard() {
     }
 }
 
-// --- HISTORIAL DE PEDIDOS ---
+// --- HISTORIAL DE PEDIDOS (CON DESVÍO INTELIGENTE) ---
 async function mostrarHistorialPedidos() {
     const auth = getAuth();
     if(!auth.currentUser) return;
 
+    // 1. NUEVO: Si el usuario es Vendedor, lo mandamos a su Gestión
+    if (rolRealUsuario === 'vendedor') {
+        abrirGestionPedidos(); // Redirige a la pantalla de ventas
+        return; // Detenemos aquí para que no cargue la vista de cliente
+    }
+
+    // 2. Si es Cliente, sigue la lógica normal de historial...
     ocultarTodo();
     mostrarBarraInferior();
     document.getElementById('view-client-orders').classList.remove('d-none');
@@ -1250,11 +1404,8 @@ async function mostrarHistorialPedidos() {
         const fecha = new Date(p.fecha).toLocaleDateString();
         const total = parseFloat(p.total).toFixed(2);
         
-        // AQUÍ EL CAMBIO VISUAL: Usamos el nombre del negocio
         const tituloPrincipal = p.nombreNegocio || "Tienda Desconocida";
         const idPedido = p.id.slice(-5).toUpperCase();
-
-        // Como pasamos el objeto 'p' en el onclick, nos aseguramos que las comillas no rompan el HTML
         const pString = JSON.stringify(p).replace(/"/g, '&quot;');
 
         const html = `
@@ -1360,6 +1511,18 @@ function verDetalleHistorial(pedido) {
 }
 
 
+function mostrarComingSoon() {
+    ocultarTodo();
+    ocultarBarraInferior();
+    
+    const el = document.getElementById('view-coming-soon');
+    if(el) {
+        el.classList.remove('d-none');
+        el.classList.add('d-flex'); 
+    }
+}
+
+
 
 // --- ASIGNACIONES AL WINDOW ---
 // Esto es vital para que los 'onclick' del HTML funcionen
@@ -1382,6 +1545,10 @@ window.abrirSelectorVariantes = abrirSelectorVariantes;
 window.agregarVarianteDesdeModal = agregarVarianteDesdeModal;
 window.cambiarCantidadTemp = cambiarCantidadTemp; 
 window.confirmarSeleccionVariantes = confirmarSeleccionVariantes;
+window.mostrarComingSoon = mostrarComingSoon;
+window.abrirGestionPedidos = abrirGestionPedidos;
+window.filtrarPedidosVendedor = filtrarPedidosVendedor;
+window.cambiarEstadoPedido = cambiarEstadoPedido;
 window.inicializarCategorias = inicializarCategorias;
 window.cargarProductosEnDashboard = cargarProductosEnDashboard;
 window.verDetalleHistorial = verDetalleHistorial;
@@ -1399,9 +1566,8 @@ window.filtrarNegocios = filtrarNegocios;
 window.verNegocio = verNegocio;
 window.regresarAlHomeCliente = regresarAlHomeCliente;
 
-// --- EXPORTACIONES ---
 export { 
     mostrarPantallaDashboard, mostrarSelectorGoogle, mostrarLogin, mostrarRegistro, 
     mostrarOpcionesBienvenida, inicializarCategorias, cargarProductosEnDashboard, 
-    borrarProducto, mostrarConfiguracionUbicacion, mostrarHistorialPedidos, verDetalleHistorial
+    borrarProducto, mostrarConfiguracionUbicacion, mostrarHistorialPedidos, verDetalleHistorial, mostrarComingSoon
 };
